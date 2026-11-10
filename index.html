@@ -342,7 +342,6 @@ th{background:var(--surface-2);font-weight:600;position:sticky;top:0;z-index:1}
 .anchor-visual{border:1px solid var(--border);background:var(--surface);margin-top:6px;border-radius:6px;overflow:hidden}
 .anchor-visual-title{padding:5px;text-align:center;background:var(--surface-2);border-bottom:1px solid var(--border);font-size:11px;font-weight:600}
 .anchor-visual svg{display:block;width:100%;height:230px;background:#fff}
-.anchor-visual-meta{padding:6px;font-size:11px;border-top:1px solid var(--border);display:flex;gap:12px;flex-wrap:wrap;color:var(--muted-text)}
 .anchor-form{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
 .anchor-form-panel{
   border:1px solid var(--border);background:var(--surface-2);padding:8px;
@@ -370,7 +369,8 @@ th{background:var(--surface-2);font-weight:600;position:sticky;top:0;z-index:1}
 .aq-bar{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:6px;border-bottom:1px solid var(--border);background:var(--surface-2)}
 .aq-bar label{margin:0;font-size:11px}
 .aq-bar .aq-pick{display:flex;gap:4px;align-items:center}
-.aq-bar .aq-pick input{height:28px;font-size:14px;flex:1;min-width:0}
+.aq-bar .aq-pick input,.aq-bar select{height:30px;font-size:13px;min-width:0;width:100%}
+.aq-bar .aq-pick select{flex:1}
 .aq-bar .aq-pick button{padding:2px 8px;height:28px}
 .aq-tools{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px;border-top:1px solid var(--border);background:var(--surface-2);font-size:11px}
 .aq-tools button{padding:3px 8px}
@@ -524,7 +524,7 @@ body{height:100dvh;min-height:0;padding-bottom:env(safe-area-inset-bottom,0px)}
 <body>
 <div class="loading-bar" id="loadingBar"></div>
 <div class="titlebar">
-  <div id="windowTitle">OpenType Professional Studio · No font loaded</div>
+  <div id="windowTitle">OpenType  Professional Studio · No font loaded</div>
   <div class="title-actions">
     <span class="badge" id="dirtyBadge" style="display:none">● Unsaved</span>
     <button class="theme-toggle" data-action="toggleTheme" title="Toggle theme">
@@ -540,7 +540,7 @@ body{height:100dvh;min-height:0;padding-bottom:env(safe-area-inset-bottom,0px)}
       <button data-action="openProject">Import Project JSON…</button>
       <button data-action="saveProject">Save Project JSON <span class="kbd">Ctrl+S</span></button>
       <div class="menu-sep"></div>
-      <button data-action="exportFontTTF">Export Font (.ttf)…</button>
+      <button data-action="exportFont">Export Font (.ttf / .otf / .woff)…</button>
       <button data-action="exportFea">Export Feature File (.fea)</button>
       <div class="menu-sep"></div>
       <button data-action="closeProject">Close Project</button>
@@ -613,7 +613,7 @@ body{height:100dvh;min-height:0;padding-bottom:env(safe-area-inset-bottom,0px)}
   <button data-action="testLookup">Test</button>
   <button data-action="validate">Validate</button>
   <button data-action="exportFea">.fea</button>
-  <button data-action="exportFontTTF" class="primary">Export TTF</button>
+  <button data-action="exportFont" class="primary">Export Font</button>
 </div>
 
 <div id="main">
@@ -673,7 +673,7 @@ body{height:100dvh;min-height:0;padding-bottom:env(safe-area-inset-bottom,0px)}
 </div>
 
 <div class="note">
-  <b>Workflow:</b> Open a font to populate glyphs and import its GSUB/GPOS/GDEF data. Double-click any lookup to edit (read-only lookups convert automatically). Export a new .ttf with your changes via <b>Export TTF</b>.
+  <b>Workflow:</b> Open a font to populate glyphs and import its GSUB/GPOS/GDEF data. Double-click any lookup to edit (read-only lookups convert automatically). Export a new font (.ttf, .otf or .woff) with your changes via <b>Export Font</b>.
 </div>
 <div class="status">
   <span id="status" role="status" aria-live="polite">Open a font to begin.</span>
@@ -836,7 +836,7 @@ function render(){
 
   const glyphCount = project.glyphs?.length || 0;
   $("#counts").textContent = `${scripts.length} scripts · ${(project.lookups||[]).length} lookups · ${(project.groups||[]).length} groups · ${glyphCount} glyphs · ${fontDirectory.length} tables`;
-  $("#windowTitle").firstChild.textContent = `OpenType Professional Studio · ${project.fontName||"Untitled"}`;
+  $("#windowTitle").firstChild.textContent = `OpenType  Professional Studio · ${project.fontName||"Untitled"}`;
 
   $("#filterAllBtn")?.classList.toggle("active", !lookupFilterConjunct);
   $("#filterConjunctBtn")?.classList.toggle("active", lookupFilterConjunct);
@@ -1603,7 +1603,7 @@ function pairValueSummary(r){
       </svg></div>`;
   }
   const sigOf = d => JSON.stringify(d);
-  function render(wrap, view){
+  function renderPairPreview(wrap, view){
     const sc = wrap.closest(".field-grid") || wrap.parentElement, d = readPair(sc);
     const box = wrap.querySelector(".pp-panes");
     const sig = sigOf(d) + (view ? "v" : "");
@@ -1611,7 +1611,7 @@ function pairValueSummary(r){
     wrap.__sig = sig;
     box.innerHTML = pane(d, false) + pane(d, true, view);
   }
-  setInterval(() => document.querySelectorAll(".pp-wrap").forEach(w => { if(!w.__drag) render(w); }), 250);
+  setInterval(() => document.querySelectorAll(".pp-wrap").forEach(w => { if(!w.__drag) renderPairPreview(w); }), 250);
 
   document.addEventListener("pointerdown", e => {
     const t = e.target.closest?.("[data-pp-drag]"); if(!t) return;
@@ -1628,9 +1628,9 @@ function pairValueSummary(r){
       if(mode === "second"){ set("rP2_xPlacement", start.s.xPlacement + dx); set("rP2_yPlacement", start.s.yPlacement + dy); }
       else if(mode === "kern"){ set("rP1_xAdvance", start.f.xAdvance + dx); }
       else { set("rP1_xPlacement", start.f.xPlacement + dx); set("rP1_yPlacement", start.f.yPlacement + dy); }
-      render(wrap, view);
+      renderPairPreview(wrap, view);
     };
-    const up = () => { document.removeEventListener("pointermove", move); document.removeEventListener("pointerup", up); wrap.__drag = false; wrap.__sig = null; render(wrap); };
+    const up = () => { document.removeEventListener("pointermove", move); document.removeEventListener("pointerup", up); wrap.__drag = false; wrap.__sig = null; renderPairPreview(wrap); };
     document.addEventListener("pointermove", move); document.addEventListener("pointerup", up);
   });
 })();
@@ -1650,7 +1650,6 @@ function lookupGlyphsMarkup(names){
   }).join("") || '<span class="muted">—</span>';
 }
 function localLookupMarkup(l){
-  const isSub = l.table === "GSUB";
   const rules = (l.rules||[]).map((r,i) => {
     const from = r.input || (r.left && r.right ? [r.left, r.right] : r.glyph ? [r.glyph] : r.firstGlyph ? [r.firstGlyph] : []);
     const to = r.output || (r.xPlacement !== undefined ? [`x:${r.xPlacement} y:${r.yPlacement} dx:${r.xAdvance} dy:${r.yAdvance}`] : r.value1 !== undefined ? [pairValueSummary(r)] : r.secondGlyph ? [r.secondGlyph] : []);
@@ -1725,6 +1724,30 @@ function normalizeAnchorRule(r, info){
     secondAnchor: {...(info ? {name: info.secondDefault, x:0, y:0} : {name:"mark",x:0,y:0}), ...anchorRuleSecond(r)},
     component: r.component || 1
   };
+}
+window.__aqGroup = window.__aqGroup || {first:"base", second:"marks"};
+function aqList(which){
+  const g = window.__aqGroup[which] || "base", all = project.glyphs || [];
+  let names;
+  if(g === "all") names = all.map(x => x.name);
+  else if(g === "marks") names = aqNames(true);
+  else if(g === "base") names = aqNames(false);
+  else if(g.startsWith("g:")){
+    const grp = (project.groups || [])[Number(g.slice(2))];
+    names = (grp?.glyphs || []).filter(n => findGlyph(n));
+  } else names = aqNames(false);
+  return names.slice(0, 6000);
+}
+function aqGroupOptions(which){
+  const cur = window.__aqGroup[which];
+  const opts = [["base","Base glyphs"],["marks","Mark glyphs"],["all","All glyphs"]];
+  (project.groups || []).forEach((g,i) => opts.push(["g:" + i, "Group: " + g.name + " (" + (g.glyphs?.length || 0) + ")"]));
+  return opts.map(([v,l]) => `<option value="${esc(v)}" ${v === cur ? "selected" : ""}>${esc(l)}</option>`).join("");
+}
+function aqGlyphOptions(which, current){
+  const list = aqList(which);
+  const extra = current && !list.includes(current) ? [current] : [];
+  return `<option value="">— choose glyph —</option>` + [...extra, ...list].map(n => `<option value="${esc(n)}" ${n === current ? "selected" : ""}>${esc(n)}</option>`).join("");
 }
 function aqNames(wantMarks){
   const all = project.glyphs || [];
@@ -1846,10 +1869,18 @@ function editAnchorLookup(lookup){
     <div class="anchor-visual">
       <div class="anchor-visual-title">Preview</div>
       <div class="aq-bar">
-        <label>${esc(info.first)} (type or pick)
-          <span class="aq-pick"><button type="button" data-aq-step="first:-1" title="Previous glyph">◀</button><input id="qFirst" list="aqFirstList" placeholder="e.g. bn_ka" autocomplete="off"><button type="button" data-aq-step="first:1" title="Next glyph">▶</button></span></label>
-        <label>${esc(info.second)} (type or pick)
-          <span class="aq-pick"><button type="button" data-aq-step="second:-1" title="Previous glyph">◀</button><input id="qSecond" list="aqSecondList" placeholder="e.g. bn_reph" autocomplete="off"><button type="button" data-aq-step="second:1" title="Next glyph">▶</button></span></label>
+        <div>
+          <label>${esc(info.first)} · Glyph Group</label>
+          <select id="qFirstGroup">${aqGroupOptions("first")}</select>
+          <label style="margin-top:4px">${esc(info.first)} · Glyph (drop-down, or type to jump)</label>
+          <span class="aq-pick"><button type="button" data-aq-step="first:-1" title="Previous glyph">◀</button><select id="qFirst">${aqGlyphOptions("first", "")}</select><button type="button" data-aq-step="first:1" title="Next glyph">▶</button></span>
+        </div>
+        <div>
+          <label>${esc(info.second)} · Glyph Group</label>
+          <select id="qSecondGroup">${aqGroupOptions("second")}</select>
+          <label style="margin-top:4px">${esc(info.second)} · Glyph (drop-down, or type to jump)</label>
+          <span class="aq-pick"><button type="button" data-aq-step="second:-1" title="Previous glyph">◀</button><select id="qSecond">${aqGlyphOptions("second", "")}</select><button type="button" data-aq-step="second:1" title="Next glyph">▶</button></span>
+        </div>
       </div>
       <div id="anchorPreview" tabindex="0">${anchorPreviewSvg("", "", 0, 0, 0, 0)}</div>
       <div class="aq-tools">
@@ -1871,8 +1902,6 @@ function editAnchorLookup(lookup){
         <label>Zoom <input id="aqZoom" type="range" min="0.5" max="4" step="0.1" value="${Number(window.__anchorZoom)||1}"></label>
         <span><button type="button" data-aq-pair="-1">◀ Pair</button> <button type="button" data-aq-pair="1">Pair ▶</button></span>
       </div>
-      <datalist id="aqFirstList">${aqNames(false).map(n => `<option value="${esc(n)}">`).join("")}</datalist>
-      <datalist id="aqSecondList">${aqNames(true).map(n => `<option value="${esc(n)}">`).join("")}</datalist>
     </div>
     <div class="anchor-form">
       <div class="anchor-form-panel">
@@ -1967,9 +1996,14 @@ function editAnchorLookup(lookup){
     updatePreview();
   };
   function syncQuick(){
-    const a = get("qFirst"), b = get("qSecond");
-    if(a && document.activeElement !== a) a.value = get("anchorFirstGlyph")?.value || "";
-    if(b && document.activeElement !== b) b.value = get("anchorSecondGlyph")?.value || "";
+    [["first","qFirst","anchorFirstGlyph"],["second","qSecond","anchorSecondGlyph"]].forEach(([which, selId, hid]) => {
+      const sel = get(selId); if(!sel) return;
+      const cur = get(hid)?.value || "";
+      if(sel.value !== cur || ![...sel.options].some(o => o.value === cur)){
+        sel.innerHTML = aqGlyphOptions(which, cur);
+        sel.value = cur;
+      }
+    });
   }
   const loadRule = index => {
     const r = normalizeAnchorRule(lookup.rules[index], info);
@@ -2039,7 +2073,6 @@ function editAnchorLookup(lookup){
         a[ri.classList.contains("row-x") ? "x" : "y"] = Math.round(Number(ri.value) || 0);
       }
       lookup.rules[i] = rule; snapshot();
-      const keep = {side, row:i, cls:ri.className};
       refresh(); editIndex = i; loadRule(i);
       return;
     }
@@ -2144,7 +2177,7 @@ function editAnchorLookup(lookup){
     applyChange();
   };
   const stepGlyph = (which, dir) => {
-    const list = aqNames(which === "second");
+    const list = aqList(which);
     if(!list.length) return;
     const id = which === "first" ? "anchorFirstGlyph" : "anchorSecondGlyph";
     const cur = list.indexOf(get(id).value);
@@ -2170,9 +2203,15 @@ function editAnchorLookup(lookup){
     updatePreview();
   };
   o.addEventListener("change", e => {
+    if(e.target.id === "qFirstGroup" || e.target.id === "qSecondGroup"){
+      const which = e.target.id === "qFirstGroup" ? "first" : "second";
+      window.__aqGroup[which] = e.target.value;
+      const sel = get(which === "first" ? "qFirst" : "qSecond");
+      sel.innerHTML = aqGlyphOptions(which, get(which === "first" ? "anchorFirstGlyph" : "anchorSecondGlyph")?.value || "");
+      return;
+    }
     if(e.target.id === "qFirst" || e.target.id === "qSecond"){
       const name = e.target.value.trim();
-      if(name && !findGlyph(name)){ Toast.warn(`"${name}" is not a glyph in this font`); syncQuick(); return; }
       get(e.target.id === "qFirst" ? "anchorFirstGlyph" : "anchorSecondGlyph").value = name;
       pickedGlyphs();
     }
@@ -2393,7 +2432,6 @@ function parseLookupRules(r, lookupPos, lookup, tableTag, font){
         const lookaheadCount = r.u16(cursor);
         cursor += 2;
         if(lookaheadCount !== null) cursor += lookaheadCount*2;
-        const substCount = r.u16(cursor); cursor += 2;
         const glyphCount = r.u16(cursor); cursor += 2;
         cov.forEach((gid, i) => {
           if(i >= glyphCount) return;
@@ -3041,25 +3079,107 @@ function editGlyphs(){
 }
 
 function proofingTool(){
-  const features = (selected.script && selected.language ? project.scripts[selected.script][selected.language] : []).map(x => x.tag);
+  const BANGLA_TAGS = ["locl","nukt","akhn","rphf","blwf","half","pstf","vatu","cjct","pres","abvs","blws","psts","haln","calt","abvm","blwm","mark","mkmk"];
+  const COMMON_TAGS = ["ccmp","init","medi","fina","isol","liga","dlig","clig","kern","dist","case","ss01","ss02","ss03","cv01","cv02"];
+  /* features: everything defined in the project (all scripts/languages) - not just the selected one */
+  const fromProject = [];
+  Object.values(project.scripts || {}).forEach(S => Object.values(S).forEach(fs => fs.forEach(f => { if(!fromProject.includes(f.tag)) fromProject.push(f.tag); })));
+  const feats = new Map();   /* tag -> on/off */
+  fromProject.forEach(t => feats.set(t, true));
+  const samples = [["আমা","আমা"],["আমার সোনার বাংলা","আমার সোনার বাংলা"],["ক্ক ক্ষ জ্ঞ ঙ্গ ক্ট ন্ত","ক্ক ক্ষ জ্ঞ ঙ্গ ক্ট ন্ত"],["কর্ম ধর্ম সূর্য","কর্ম ধর্ম সূর্য"],["ক্র প্র ব্র ত্র","ক্র প্র ব্র ত্র"],["বিদ্যা বিদ্যুৎ","বিদ্যা বিদ্যুৎ"],["কি কী কু কূ কৃ কে কৈ কো কৌ","কি কী কু কূ কৃ কে কৈ কো কৌ"],["০১২৩৪৫৬৭৮৯","০১২৩৪৫৬৭৮৯"]];
+  const canEdited = !!(loadedFont && loadedFontBuffer);
   const o = modal("Proofing Tool", `
-    <label>Test string</label><textarea id="proofText" rows="3"></textarea>
-    <label>Feature settings</label>
-    <div>${features.map(t => `<label style="display:inline-block;font-weight:400;margin-right:12px"><input type="checkbox" data-proof-feature="${esc(t)}" checked> ${esc(t)}</label>`).join("") || '<span class="muted">No features</span>'}</div>
-    <label>Size <input id="proofSize" type="range" min="20" max="90" value="44" style="width:auto;display:inline-block"></label>
-    <div id="proofPreview" class="preview"></div>
-  `, [["Close"]], 720);
-  const update = () => {
-    const p = o.querySelector("#proofPreview");
-    const tags = [...o.querySelectorAll("[data-proof-feature]")].map(x => `"${x.dataset.proofFeature}" ${x.checked?1:0}`);
-    p.textContent = o.querySelector("#proofText").value;
-    p.style.fontSize = o.querySelector("#proofSize").value + "px";
-    p.style.fontFeatureSettings = tags.join(",") || "normal";
+    <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap">
+      <div style="flex:1;min-width:240px"><label>Test string</label><textarea id="proofText" rows="2" placeholder="Type Bangla text here"></textarea></div>
+      <div><label>Sample</label><select id="proofSample"><option value="">Choose…</option>${samples.map(([v,l]) => `<option value="${esc(v)}">${esc(l)}</option>`).join("")}</select></div>
+    </div>
+    <label style="margin-top:10px">Feature settings <small class="muted">(tick = ON, untick = OFF)</small></label>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
+      <button type="button" id="pfAll">All on</button><button type="button" id="pfNone">All off</button>
+      <button type="button" id="pfBangla">Add Bangla set</button>
+    </div>
+    <div id="proofFeatures" style="display:flex;flex-wrap:wrap;gap:4px 14px;margin-bottom:8px"></div>
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+      <b style="font-size:12px">Add Feature</b>
+      <input id="proofAddTag" list="proofTagList" maxlength="4" placeholder="e.g. liga, ss01" style="width:140px">
+      <datalist id="proofTagList">${[...BANGLA_TAGS, ...COMMON_TAGS].map(t => `<option value="${t}">`).join("")}</datalist>
+      <button type="button" id="proofAddBtn">Add</button>
+      <span class="muted" style="font-size:11px">4-letter tag. Added features are switched on right away.</span>
+    </div>
+    <label style="margin-top:10px">Size <input id="proofSize" type="range" min="16" max="160" value="56" style="width:200px;display:inline-block"> <span id="proofSizeVal" class="muted">56px</span></label>
+    <div style="margin-top:6px"><b style="font-size:12px">Opened font (original)</b></div>
+    <div id="proofOrig" class="preview" style="min-height:90px"></div>
+    <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b style="font-size:12px">With my lookup edits (compiled)</b>
+      <button type="button" id="proofRebuild" ${canEdited ? "" : "disabled"}>Rebuild from my edits</button><span id="proofBuildNote" class="muted" style="font-size:11px"></span></div>
+    <div id="proofEdit" class="preview" style="min-height:90px"></div>
+  `, [["Close"]], 860);
+
+  const q = id => o.querySelector("#" + id);
+  const fam = {orig: loadedFontURL ? '"LoadedProofFont"' : "inherit", edit: null};
+  let editedFace = null;
+
+  const renderFeatures = () => {
+    const box = q("proofFeatures");
+    box.innerHTML = feats.size ? [...feats.entries()].map(([t,on]) =>
+      `<label style="display:inline-flex;align-items:center;gap:4px;font-weight:400;margin:0"><input type="checkbox" data-proof-feature="${esc(t)}" ${on ? "checked" : ""}> ${esc(t)}
+        <button type="button" data-proof-remove="${esc(t)}" title="Remove" style="padding:0 5px;line-height:1.2;font-size:11px">×</button></label>`).join("")
+      : '<span class="muted">No features yet — use Add Feature or Add Bangla set</span>';
   };
-  o.querySelector("#proofText").oninput = update;
-  o.querySelector("#proofSize").oninput = update;
-  o.querySelectorAll("[data-proof-feature]").forEach(x => x.onchange = update);
-  update();
+  const css = () => {
+    const tags = [...feats.entries()].map(([t,on]) => `"${t}" ${on ? 1 : 0}`);
+    return tags.length ? tags.join(",") : "normal";
+  };
+  const update = () => {
+    const text = q("proofText").value, size = q("proofSize").value + "px";
+    q("proofSizeVal").textContent = size;
+    [["proofOrig", fam.orig], ["proofEdit", fam.edit]].forEach(([id, family]) => {
+      const p = q(id);
+      p.textContent = text;
+      p.lang = "bn";
+      p.style.fontSize = size;
+      p.style.lineHeight = "1.5";
+      if(family) p.style.fontFamily = family + ", sans-serif";
+      p.style.fontFeatureSettings = css();
+      p.style.fontKerning = "normal";
+    });
+    if(!fam.edit) q("proofEdit").textContent = canEdited ? "Building…" : "Open a font to preview your edits.";
+  };
+  const buildEdited = async () => {
+    if(!canEdited) return;
+    q("proofBuildNote").textContent = "compiling…";
+    const r = await buildExportSfnt();
+    if(!r){ q("proofBuildNote").textContent = "could not compile (see message)"; return; }
+    try{
+      const name = "ProofEdited" + Date.now();
+      const face = new FontFace(name, r.arrayBuffer);
+      await face.load();
+      document.fonts.add(face);
+      if(editedFace) document.fonts.delete(editedFace);
+      editedFace = face; fam.edit = `"${name}"`;
+      q("proofBuildNote").textContent = `GSUB ${r.nG} · GPOS ${r.nP} lookups compiled`;
+      update();
+    }catch(e){ q("proofBuildNote").textContent = "browser could not load the compiled font: " + e.message; }
+  };
+
+  q("proofText").oninput = update;
+  q("proofSize").oninput = update;
+  q("proofSample").onchange = e => { if(e.target.value){ q("proofText").value = e.target.value; update(); } };
+  q("pfAll").onclick = () => { feats.forEach((v,k) => feats.set(k, true)); renderFeatures(); update(); };
+  q("pfNone").onclick = () => { feats.forEach((v,k) => feats.set(k, false)); renderFeatures(); update(); };
+  q("pfBangla").onclick = () => { BANGLA_TAGS.forEach(t => { if(!feats.has(t)) feats.set(t, true); }); renderFeatures(); update(); };
+  const addTag = () => {
+    const t = q("proofAddTag").value.trim();
+    if(!/^[A-Za-z0-9 ]{4}$/.test(t)){ Toast.warn("A feature tag must be exactly 4 characters, e.g. liga, ss01"); return; }
+    feats.set(t, true); q("proofAddTag").value = ""; renderFeatures(); update();
+  };
+  q("proofAddBtn").onclick = addTag;
+  q("proofAddTag").addEventListener("keydown", e => { if(e.key === "Enter"){ e.preventDefault(); addTag(); } });
+  q("proofFeatures").addEventListener("change", e => { const t = e.target.dataset?.proofFeature; if(t){ feats.set(t, e.target.checked); update(); } });
+  q("proofFeatures").addEventListener("click", e => { const t = e.target.dataset?.proofRemove; if(t){ feats.delete(t); renderFeatures(); update(); } });
+  q("proofRebuild").onclick = buildEdited;
+  q("proofText").value = "আমার সোনার বাংলা";
+  renderFeatures(); update();
+  buildEdited();
 }
 
 function validateProject(){
@@ -3200,7 +3320,7 @@ function feaValueRecord(l, r){
 function featureSource(){
   const lines = [
     "# OpenType feature file",
-    "# Exported by OpenType Professional Studio",
+    "# Exported by OpenType  Professional Studio",
     ""
   ];
   const seenLang = new Set();
@@ -3275,7 +3395,6 @@ function exportFea(){
    TTF Font Export (Full GSUB/GPOS compiler)
    ============================================================ */
 function u16be(v){ return [(v>>8)&0xff, v&0xff]; }
-function concat(arrays){ const len = arrays.reduce((n,a) => n+a.length, 0); const out = new Uint8Array(len); let p = 0; arrays.forEach(a => { out.set(a, p); p += a.length; }); return out; }
 
 function coverageTable(glyphIds){
   const sorted = [...new Set(glyphIds)].sort((a,b) => a-b);
@@ -3287,49 +3406,48 @@ function coverageTable(glyphIds){
 }
 
 function writeSingleSubtable(entries, font){
+  entries = [...new Map(entries.map(e => [e[0], e])).values()].sort((a,b) => a[0] - b[0]);
   const glyphIn = entries.map(e => e[0]);
   const glyphOut = entries.map(e => e[1]);
   const cov = coverageTable(glyphIn);
-  const covOffset = 6;
-  const out = new Uint8Array(covOffset + cov.length + glyphOut.length*2);
+  const covOffset = 6 + glyphOut.length * 2;                 /* substitutes sit right after the 6-byte header */
+  const out = new Uint8Array(covOffset + cov.length);
   out.set(u16be(2), 0);
   out.set(u16be(covOffset), 2);
   out.set(u16be(glyphOut.length), 4);
+  glyphOut.forEach((gid,i) => out.set(u16be(gid), 6 + i*2));
   out.set(cov, covOffset);
-  glyphOut.forEach((gid,i) => out.set(u16be(gid), covOffset + cov.length + i*2));
   return out;
 }
 function writeMultipleSubtable(entries, font){
+  entries = [...new Map(entries.map(e => [e[0], e])).values()].sort((a,b) => a[0] - b[0]);
   const glyphIn = entries.map(e => e[0]);
   const sequences = entries.map(e => e[1].map(n => font.nameToGlyphIndex(n) || 0));
   const cov = coverageTable(glyphIn);
-  const headerLen = 6;
-  const seqOffsetsLen = sequences.length * 2;
-  const baseSeqStart = headerLen + cov.length + seqOffsetsLen;
+  const covOffset = 6 + sequences.length * 2;
   const sequencesData = sequences.map(seq => {
     const buf = new Uint8Array(2 + seq.length*2);
     buf.set(u16be(seq.length), 0);
     seq.forEach((gid,i) => buf.set(u16be(gid), 2 + i*2));
     return buf;
   });
-  let cursor = baseSeqStart;
+  let cursor = covOffset + cov.length;
   const offsets = sequencesData.map(buf => { const o = cursor; cursor += buf.length; return o; });
   const out = new Uint8Array(cursor);
   out.set(u16be(1), 0);
-  out.set(u16be(headerLen), 2);
+  out.set(u16be(covOffset), 2);
   out.set(u16be(sequences.length), 4);
-  out.set(cov, headerLen);
-  offsets.forEach((off,i) => out.set(u16be(off), headerLen + cov.length + i*2));
-  let p = baseSeqStart;
+  offsets.forEach((off,i) => out.set(u16be(off), 6 + i*2));
+  out.set(cov, covOffset);
+  let p = covOffset + cov.length;
   sequencesData.forEach(buf => { out.set(buf, p); p += buf.length; });
   return out;
 }
 function writeLigatureSubtable(map, font){
-  const firstGlyphs = Object.keys(map);
+  const firstGlyphs = Object.keys(map).sort((a,b) => (font.nameToGlyphIndex(a)||0) - (font.nameToGlyphIndex(b)||0));
   const firstGIDs = firstGlyphs.map(n => font.nameToGlyphIndex(n) || 0);
   const cov = coverageTable(firstGIDs);
-  const headerLen = 6;
-  const setOffsetTableLen = firstGIDs.length * 2;
+  const covOffset = 6 + firstGIDs.length * 2;
   const ligatureSets = firstGlyphs.map(first => {
     const ligs = map[first];
     const sortedLigs = [...ligs].sort((a,b) => b.seq.length - a.seq.length);
@@ -3346,31 +3464,31 @@ function writeLigatureSubtable(map, font){
     });
     return setTable;
   });
-  const setStart = headerLen + cov.length + setOffsetTableLen;
+  const setStart = covOffset + cov.length;
   let cursor = setStart;
   const setOffsets = ligatureSets.map(buf => { const o = cursor; cursor += buf.length; return o; });
   const out = new Uint8Array(cursor);
   out.set(u16be(1), 0);
-  out.set(u16be(headerLen), 2);
+  out.set(u16be(covOffset), 2);
   out.set(u16be(firstGIDs.length), 4);
-  out.set(cov, headerLen);
-  setOffsets.forEach((o,i) => out.set(u16be(o), headerLen + cov.length + i*2));
+  setOffsets.forEach((o,i) => out.set(u16be(o), 6 + i*2));
+  out.set(cov, covOffset);
   let p = setStart;
   ligatureSets.forEach(buf => { out.set(buf, p); p += buf.length; });
   return out;
 }
 function writeSinglePosSubtable(map, font){
-  const names = Object.keys(map);
+  const names = Object.keys(map).sort((a,b) => (font.nameToGlyphIndex(a)||0) - (font.nameToGlyphIndex(b)||0));
   const gids = names.map(n => font.nameToGlyphIndex(n) || 0);
   const cov = coverageTable(gids);
   const valueFormat = 0x000F;
-  const headerLen = 6;
-  const out = new Uint8Array(headerLen + cov.length + names.length*8);
-  out.set(u16be(1), 0);
-  out.set(u16be(headerLen), 2);
+  const covOffset = 8 + names.length * 8;
+  const out = new Uint8Array(covOffset + cov.length);
+  out.set(u16be(2), 0);                                      /* format 2: one value record per covered glyph */
+  out.set(u16be(covOffset), 2);
   out.set(u16be(valueFormat), 4);
-  out.set(cov, headerLen);
-  let p = headerLen + cov.length;
+  out.set(u16be(names.length), 6);
+  let p = 8;
   names.forEach(n => {
     const v = map[n];
     out.set(u16be((v.xPlacement||0) & 0xffff), p);
@@ -3379,14 +3497,15 @@ function writeSinglePosSubtable(map, font){
     out.set(u16be((v.yAdvance||0) & 0xffff), p+6);
     p += 8;
   });
+  out.set(cov, covOffset);
   return out;
 }
 function writePairPosSubtable(map, font){
-  const lefts = Object.keys(map);
+  const gidOf = n => font.nameToGlyphIndex(n) || 0;
+  const lefts = Object.keys(map).sort((a,b) => gidOf(a) - gidOf(b));
   const leftGIDs = lefts.map(n => font.nameToGlyphIndex(n) || 0);
   const cov = coverageTable(leftGIDs);
-  const headerLen = 10;
-  const setOffsetTableLen = lefts.length * 2;
+  const covOffset = 10 + lefts.length * 2;
   const BITS = [[1,"xPlacement"],[2,"yPlacement"],[4,"xAdvance"],[8,"yAdvance"]];
   const getRec = (v, which) => v[which] || {xPlacement:0,yPlacement:0,xAdvance:v.xAdvance||0,yAdvance:0};
   let valueFormat1 = 0, valueFormat2 = 0;
@@ -3398,7 +3517,7 @@ function writePairPosSubtable(map, font){
   const n1 = BITS.filter(([b]) => valueFormat1 & b).length, n2 = BITS.filter(([b]) => valueFormat2 & b).length;
   const recLen = 2 + (n1 + n2) * 2;
   const pairSets = lefts.map(l => {
-    const rights = Object.entries(map[l]);
+    const rights = Object.entries(map[l]).sort((a,b) => gidOf(a[0]) - gidOf(b[0]));
     const buf = new Uint8Array(2 + rights.length * recLen);
     buf.set(u16be(rights.length), 0);
     rights.forEach(([rName, v], i) => {
@@ -3410,17 +3529,17 @@ function writePairPosSubtable(map, font){
     });
     return buf;
   });
-  const setStart = headerLen + cov.length + setOffsetTableLen;
+  const setStart = covOffset + cov.length;
   let cursor = setStart;
   const setOffsets = pairSets.map(buf => { const o = cursor; cursor += buf.length; return o; });
   const out = new Uint8Array(cursor);
   out.set(u16be(1), 0);
-  out.set(u16be(headerLen), 2);
+  out.set(u16be(covOffset), 2);
   out.set(u16be(valueFormat1), 4);
   out.set(u16be(valueFormat2), 6);
   out.set(u16be(leftGIDs.length), 8);
-  out.set(cov, headerLen);
-  setOffsets.forEach((o,i) => out.set(u16be(o), headerLen + cov.length + i*2));
+  out.set(cov, covOffset);
+  setOffsets.forEach((o,i) => out.set(u16be(o), 10 + i*2));
   let p = setStart;
   pairSets.forEach(buf => { out.set(buf, p); p += buf.length; });
   return out;
@@ -3434,8 +3553,9 @@ function writeAnchor(anchor){
   return out;
 }
 function writeMarkBasePosSubtable(rules, font){
-  const markGlyphs = [...new Set(rules.map(r => r.secondGlyph).filter(Boolean))];
-  const baseGlyphs = [...new Set(rules.map(r => r.firstGlyph).filter(Boolean))];
+  const gidOf = n => font.nameToGlyphIndex(n) || 0;
+  const markGlyphs = [...new Set(rules.map(r => r.secondGlyph).filter(Boolean))].sort((a,b) => gidOf(a) - gidOf(b));
+  const baseGlyphs = [...new Set(rules.map(r => r.firstGlyph).filter(Boolean))].sort((a,b) => gidOf(a) - gidOf(b));
   if(!markGlyphs.length || !baseGlyphs.length) return null;
   const markCov = coverageTable(markGlyphs.map(n => font.nameToGlyphIndex(n) || 0));
   const baseCov = coverageTable(baseGlyphs.map(n => font.nameToGlyphIndex(n) || 0));
@@ -3460,13 +3580,14 @@ function writeMarkBasePosSubtable(rules, font){
   });
   const baseAnchorsPerGlyph = baseGlyphs.map(g => markClasses.map(cls => {
     const r = rules.find(x => x.firstGlyph === g && (x.secondAnchor?.name || "mark") === cls);
-    return r?.firstAnchor || {name:"base", x:0, y:0};
+    return r?.firstAnchor || null;
   }));
   const baseArrayHeader = 2;
   let baseAnchorsCursor = baseArrayHeader + baseGlyphs.length * classCount * 2;
   const baseAnchorBufs = [];
   const baseAnchorOffsets = [];
   baseAnchorsPerGlyph.forEach(row => row.forEach(anchor => {
+    if(!anchor){ baseAnchorBufs.push(null); baseAnchorOffsets.push(0); return; }   /* NULL offset: no anchor for this class */
     const buf = writeAnchor(anchor);
     baseAnchorBufs.push(buf);
     baseAnchorOffsets.push(baseAnchorsCursor);
@@ -3479,7 +3600,7 @@ function writeMarkBasePosSubtable(rules, font){
     baseArrayBuf.set(u16be(baseAnchorOffsets[offIdx]), 2 + (i*classCount + c)*2);
     offIdx++;
   }
-  baseAnchorBufs.forEach((buf,i) => baseArrayBuf.set(buf, baseAnchorOffsets[i]));
+  baseAnchorBufs.forEach((buf,i) => { if(buf) baseArrayBuf.set(buf, baseAnchorOffsets[i]); });
   const headerLen = 12;
   let cursor = headerLen + markCov.length + baseCov.length;
   const markArrayOff = cursor; cursor += markArrayBuf.length;
@@ -3498,10 +3619,10 @@ function writeMarkBasePosSubtable(rules, font){
   return out;
 }
 function writeCursivePosSubtable(map, font){
-  const glyphs = Object.keys(map);
+  const glyphs = Object.keys(map).sort((a,b) => (font.nameToGlyphIndex(a)||0) - (font.nameToGlyphIndex(b)||0));
   const gids = glyphs.map(n => font.nameToGlyphIndex(n) || 0);
   const cov = coverageTable(gids);
-  const headerLen = 6;
+  const covOffset = 6 + glyphs.length * 4;
   const anchors = glyphs.map(g => {
     const entries = Object.values(map[g]);
     const first = entries[0];
@@ -3509,17 +3630,17 @@ function writeCursivePosSubtable(map, font){
   });
   const entryBufs = anchors.map(a => writeAnchor(a.entry));
   const exitBufs = anchors.map(a => writeAnchor(a.exit));
-  let cursor = headerLen + cov.length + glyphs.length*4;
+  let cursor = covOffset + cov.length;
   const entryOffsets = entryBufs.map(buf => { const o = cursor; cursor += buf.length; return o; });
   const exitOffsets = exitBufs.map(buf => { const o = cursor; cursor += buf.length; return o; });
   const out = new Uint8Array(cursor);
   out.set(u16be(1), 0);
-  out.set(u16be(headerLen), 2);
+  out.set(u16be(covOffset), 2);
   out.set(u16be(glyphs.length), 4);
-  out.set(cov, headerLen);
+  out.set(cov, covOffset);
   for(let i = 0; i < glyphs.length; i++){
-    out.set(u16be(entryOffsets[i]), headerLen + cov.length + i*4);
-    out.set(u16be(exitOffsets[i]), headerLen + cov.length + i*4 + 2);
+    out.set(u16be(entryOffsets[i]), 6 + i*4);
+    out.set(u16be(exitOffsets[i]), 6 + i*4 + 2);
   }
   entryBufs.forEach((buf,i) => out.set(buf, entryOffsets[i]));
   exitBufs.forEach((buf,i) => out.set(buf, exitOffsets[i]));
@@ -3590,23 +3711,24 @@ function buildGPOSFromProject(){
 
 function assembleLookupList(compiledLookups, font, table){
   const subtablesPerLookup = compiledLookups.map(l => {
-    if(l.type === 1 && table === "GSUB"){
+    if(table === "GSUB" && l.type === 1){
       const s = l.subtables[0];
       const entries = s.entries.map(([n,out]) => [font.nameToGlyphIndex(n) || 0, font.nameToGlyphIndex(out) || 0]);
       return [writeSingleSubtable(entries, font)];
     }
-    if(l.type === 2 || l.type === 3){
+    if(table === "GSUB" && (l.type === 2 || l.type === 3)){
       const s = l.subtables[0];
       const entries = s.entries.map(([n,arr]) => [font.nameToGlyphIndex(n) || 0, arr]);
       return [writeMultipleSubtable(entries, font)];
     }
-    if(l.type === 4){
+    if(table === "GSUB" && l.type === 4){
       return [writeLigatureSubtable(l.subtables[0].map, font)];
     }
     if(table === "GPOS" && l.type === 1) return [writeSinglePosSubtable(l.subtables[0].map, font)];
     if(table === "GPOS" && l.type === 2) return [writePairPosSubtable(l.subtables[0].map, font)];
     if(table === "GPOS" && l.type === 3) return [writeCursivePosSubtable(l.subtables[0].map, font)];
-    if(table === "GPOS" && [4,5,6].includes(l.type)){
+    if(table === "GPOS" && l.type === 5){ console.warn("Mark-to-Ligature lookup skipped (not supported by the compiler):", l.name); return []; }
+    if(table === "GPOS" && [4,6].includes(l.type)){
       const s = writeMarkBasePosSubtable(l.subtables[0].rules, font);
       return s ? [s] : [];
     }
@@ -3781,8 +3903,8 @@ function injectLayoutTables(arrayBuffer, newTables){
   return out.buffer;
 }
 
-async function exportFontTTF(){
-  if(!loadedFont){ Toast.warn("Open a font first"); return; }
+async function buildExportSfnt(){
+  if(!loadedFont){ Toast.warn("Open a font first"); return null; }
   try{
     Toast.show("Compiling GSUB/GPOS…");
     const gsubLookups = buildGSUBFromProject();
@@ -3829,17 +3951,88 @@ async function exportFontTTF(){
       catch(e){ Toast.warn("Table injection: " + e.message); }
     }
 
-    const name = (project.fontName||"Exported").replace(/\.[^.]+$/,"") + (bytesTag(arrayBuffer,0) === "OTTO" ? "_edited.otf" : "_edited.ttf");
-    const blob = new Blob([arrayBuffer], {type:"font/ttf"});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = name; a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 2000);
-    Toast.success(`Exported ${name} (GSUB: ${gsubLookups.length}, GPOS: ${gposLookups.length})`);
+    return {arrayBuffer, nG: gsubLookups.length, nP: gposLookups.length};
   }catch(e){
     Toast.error("Export failed: " + e.message);
     console.error(e);
+    return null;
   }
+}
+
+/* ---- WOFF 1.0 writer (zlib via the browser's CompressionStream) ---- */
+async function zlibDeflate(u8){
+  const cs = new CompressionStream("deflate"), w = cs.writable.getWriter();
+  w.write(u8); w.close();
+  return new Uint8Array(await new Response(cs.readable).arrayBuffer());
+}
+async function sfntToWoff(buf){
+  if(typeof CompressionStream === "undefined") throw new Error("This browser has no CompressionStream - use Chrome, Edge, Safari 16.4+ or Firefox 113+ for .woff");
+  const dv = new DataView(buf), n = dv.getUint16(4, false), flavor = dv.getUint32(0, false);
+  const recs = [];
+  for(let i = 0; i < n; i++){
+    const o = 12 + i * 16;
+    recs.push({tag: bytesTag(buf, o), checksum: dv.getUint32(o + 4, false), offset: dv.getUint32(o + 8, false), length: dv.getUint32(o + 12, false)});
+  }
+  recs.sort((a,b) => a.tag < b.tag ? -1 : a.tag > b.tag ? 1 : 0);
+  for(const r of recs){
+    const raw = new Uint8Array(buf, r.offset, r.length), z = await zlibDeflate(raw);
+    r.orig = r.length;
+    if(z.length < raw.length){ r.data = z; r.comp = z.length; } else { r.data = raw; r.comp = raw.length; }
+  }
+  const dirEnd = 44 + n * 20;
+  let cursor = dirEnd;
+  recs.forEach(r => { cursor = (cursor + 3) & ~3; r.woffOffset = cursor; cursor += r.comp; });
+  const total = (cursor + 3) & ~3;
+  const out = new Uint8Array(total), ov = new DataView(out.buffer);
+  [0x77,0x4F,0x46,0x46].forEach((c,i) => out[i] = c);               /* 'wOFF' */
+  ov.setUint32(4, flavor, false);
+  ov.setUint32(8, total, false);
+  ov.setUint16(12, n, false);
+  ov.setUint16(14, 0, false);
+  let sfntSize = 12 + 16 * n;
+  recs.forEach(r => { sfntSize += (r.orig + 3) & ~3; });
+  ov.setUint32(16, sfntSize, false);
+  ov.setUint16(20, 1, false); ov.setUint16(22, 0, false);
+  recs.forEach((r,i) => {
+    const o = 44 + i * 20;
+    for(let j = 0; j < 4; j++) out[o + j] = r.tag.charCodeAt(j);
+    ov.setUint32(o + 4, r.woffOffset, false);
+    ov.setUint32(o + 8, r.comp, false);
+    ov.setUint32(o + 12, r.orig, false);
+    ov.setUint32(o + 16, r.checksum, false);
+    out.set(r.data, r.woffOffset);
+  });
+  return out.buffer;
+}
+
+function exportFont(){
+  if(!loadedFont){ Toast.warn("Open a font first"); return; }
+  const isCFF = loadedFontBuffer && bytesTag(loadedFontBuffer, 0) === "OTTO";
+  const native = isCFF ? "otf" : "ttf";
+  const row = (v, title, note) => `<label style="display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border:1px solid var(--border);border-radius:8px;margin:6px 0;cursor:pointer">
+      <input type="radio" name="expFmt" value="${v}" ${v === native ? "checked" : ""} style="margin-top:3px">
+      <span><b>${title}</b>${v === native ? ' <span class="tag">matches this font</span>' : ""}<br><small class="muted">${note}</small></span></label>`;
+  modal("Export Font", `
+    <p class="muted" style="margin-top:0">This font has <b>${isCFF ? "CFF (PostScript)" : "TrueType"}</b> outlines. Your GSUB/GPOS edits are compiled into every format below.</p>
+    ${row("ttf", ".ttf — TrueType", "Desktop apps, Windows, macOS, Illustrator, Photoshop, Word.")}
+    ${row("otf", ".otf — OpenType", "Desktop apps. Best when the outlines are CFF; with TrueType outlines it is the same font data saved under the .otf name.")}
+    ${row("woff", ".woff — Web Open Font Format", "Compressed, for websites (@font-face).")}
+  `, [["Export", async w => {
+    const fmt = w.querySelector('input[name="expFmt"]:checked')?.value || native;
+    const r = await buildExportSfnt();
+    if(!r) return;
+    let data = r.arrayBuffer;
+    try{ if(fmt === "woff") data = await sfntToWoff(r.arrayBuffer); }
+    catch(e){ Toast.error("WOFF export failed: " + e.message); return; }
+    const base = (project.fontName || "Exported").replace(/\.[^.]+$/, "");
+    const name = base + "_edited." + fmt;
+    const mime = fmt === "woff" ? "font/woff" : fmt === "otf" ? "font/otf" : "font/ttf";
+    const url = URL.createObjectURL(new Blob([data], {type: mime}));
+    const a = document.createElement("a");
+    a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    Toast.success(`Exported ${name} (GSUB: ${r.nG}, GPOS: ${r.nP})`);
+  }], ["Cancel"]], 560);
 }
 
 function openTypeInspector(){
@@ -3961,7 +4154,7 @@ function loadTemplate(){
 }
 
 function about(){
-  modal("About", `<p><b>OpenType Professional Studio</b></p>
+  modal("About", `<p><b>OpenType  Professional Studio</b></p>
     <p>Bangla OpenType Builder is an independent browser-based tool for Bengali font developers. It generates OpenType feature code and is not a replacement for professional font compilation and shaping engines.</p>`, [["Close"]], 500);
 }
 function limitations(){
@@ -3971,13 +4164,15 @@ function limitations(){
       <li>GPOS 1–6, 9 (extension)</li>
       <li>Anchor subtable decoding (GPOS 3–6)</li>
       <li>Contextual rules stored as text (types 5/6)</li>
-      <li>TTF export with GSUB/GPOS binary compilation</li>
+      <li>Font export (.ttf / .otf / .woff) with GSUB/GPOS binary compilation</li>
     </ul>
     <h3>Limitations</h3>
     <ul>
       <li>Contextual (GSUB 5/6) not compiled to binary — stored as text</li>
       <li>GDEF ClassDef ranges simplified</li>
-      <li>WOFF2 requires external decoder</li>
+      <li>WOFF2 files can be opened (external decoder) but not exported</li>
+      <li>A font opened as .woff cannot be re-exported - open the .ttf/.otf source</li>
+      <li>Mark-to-Ligature (GPOS 5) lookups are not compiled</li>
       <li>No HarfBuzz shaping verification</li>
     </ul>`, [["Close"]], 640);
 }
@@ -3999,7 +4194,7 @@ const ACTIONS = {
   openProject: () => $("#projectInputHidden").click(),
   saveProject: exportProject,
   exportFea,
-  exportFontTTF,
+  exportFont,
   openTypeInspector,
   addScript, addLanguage, addFeature, removeScript, removeLanguage, removeFeature,
   addSub: () => addLookup("GSUB"),
@@ -4253,7 +4448,7 @@ function offerRestore(){
 }
 
 /* ---- 3. Render hook: welcome screen, lookup filter, counts, focus restore ---- */
-let kb = null, lastQ = "";
+let kb = null;
 const _render = render;
 render = function(){
   _render();
@@ -4335,20 +4530,20 @@ if(gs){
 }
 
 /* ---- 6. Safer export: validate first, show real problems before building ---- */
-const _exportTTF = exportFontTTF;
-exportFontTTF = function(){
+const _exportFont = exportFont;
+exportFont = function(){
   try{
     const v = validateProject();
     if(v.errors.length){
       modal("Fix before export", `<p>${v.errors.length} error(s) will produce a broken font:</p>` + v.errors.slice(0,20).map(x => `<div style="color:var(--bad)">❌ ${esc(x)}</div>`).join(""),
-        [["Cancel"], ["Export anyway", () => { _exportTTF(); return true; }, "danger"]], 560);
+        [["Cancel"], ["Export anyway", () => { _exportFont(); return true; }, "danger"]], 560);
       return;
     }
     if(v.warnings.length) Toast.warn(v.warnings.length + " validation warning(s) — see Tools ▸ Validate");
   }catch(e){}
-  return _exportTTF();
+  return _exportFont();
 };
-ACTIONS.exportFontTTF = exportFontTTF;
+ACTIONS.exportFont = exportFont;
 
 /* ---- 7. Help text ---- */
 shortcuts = function(){
@@ -4408,7 +4603,7 @@ loadFont = async function(file){
   if(projectHasWork() && !loadedFont && project.glyphs.length){
     const choice = await new Promise(res => modal("Open font",
       `<p><b>${esc(project.fontName||"This project")}</b> is open without its font file.</p>
-       <p>Attach <b>${esc(file.name)}</b> to keep your lookups and edits (glyph shapes and TTF export turn on), or replace the project with a fresh import from this font.</p>`,
+       <p>Attach <b>${esc(file.name)}</b> to keep your lookups and edits (glyph shapes and font export turn on), or replace the project with a fresh import from this font.</p>`,
       [["Attach to my project", () => { res("attach"); }], ["Replace project", () => { res("replace"); }, "danger"], ["Cancel", () => { res("cancel"); }]], 560));
     if(choice === "cancel") return;
     if(choice === "attach"){
@@ -4438,7 +4633,7 @@ function syncFontBanner(){
   if(!need){ el?.remove(); return; }
   if(!el){
     el = document.createElement("div"); el.id = "fontBanner"; el.className = "banner"; el.setAttribute("role", "status");
-    el.innerHTML = `<span><b>Font file not attached.</b> Glyph shapes can't be drawn and TTF export is off. Your project is safe — attach the original font to continue.</span><span class="spacer"></span><button class="primary" data-action="openFont">Attach font…</button>`;
+    el.innerHTML = `<span><b>Font file not attached.</b> Glyph shapes can't be drawn and font export is off. Your project is safe — attach the original font to continue.</span><span class="spacer"></span><button class="primary" data-action="openFont">Attach font…</button>`;
     ($(".banner:not(#fontBanner)") || $(".menubar")).after(el);
   }
 }
